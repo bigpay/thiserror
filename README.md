@@ -1,10 +1,10 @@
 derive(Error)
 =============
 
-[<img alt="github" src="https://img.shields.io/badge/github-dtolnay/thiserror-8da0cb?style=for-the-badge&labelColor=555555&logo=github" height="20">](https://github.com/dtolnay/thiserror)
+[<img alt="github" src="https://img.shields.io/badge/github-bigpay/thiserror-8da0cb?style=for-the-badge&labelColor=555555&logo=github" height="20">](https://github.com/bigpay/thiserror)
 [<img alt="crates.io" src="https://img.shields.io/crates/v/thiserror.svg?style=for-the-badge&color=fc8d62&logo=rust" height="20">](https://crates.io/crates/thiserror)
 [<img alt="docs.rs" src="https://img.shields.io/badge/docs.rs-thiserror-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" height="20">](https://docs.rs/thiserror)
-[<img alt="build status" src="https://img.shields.io/github/actions/workflow/status/dtolnay/thiserror/ci.yml?branch=master&style=for-the-badge" height="20">](https://github.com/dtolnay/thiserror/actions?query=branch%3Amaster)
+[<img alt="build status" src="https://img.shields.io/github/actions/workflow/status/bigpay/thiserror/ci.yml?branch=master&style=for-the-badge" height="20">](https://github.com/bigpay/thiserror/actions?query=branch%3Amaster)
 
 This library provides a convenient derive macro for the standard library's
 [`std::error::Error`] trait.
@@ -27,21 +27,66 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum DataStoreError {
-    #[error("data store disconnected")]
+    #[error(InternalServerError, "data store disconnected")]
     Disconnect(#[from] io::Error),
-    #[error("the data for key `{0}` is not available")]
+    #[error(NotFound, "the data for key `{0}` is not available")]
     Redaction(String),
-    #[error("invalid header (expected {expected:?}, found {found:?})")]
+    #[error(BadRequest, "invalid header (expected {expected:?}, found {found:?})")]
     InvalidHeader {
         expected: String,
         found: String,
     },
-    #[error("unknown data store error")]
+    #[error(InternalServerError, "unknown data store error")]
     Unknown,
 }
 ```
 
 <br>
+
+## Valid Status Code Reasons
+
+```
+BadRequest = 400
+Unauthorized =  401
+PaymentRequired = 402
+Forbidden = 403
+NotFound = 404
+MethodNotAllowed = 405
+NotAcceptable = 406
+ProxyAuthenticationRequired = 407
+RequestTimeout = 408
+Conflict = 409
+Gone = 410
+LengthRequired = 411
+PreconditionFailed = 412
+PayloadTooLarge = 413
+UriTooLong = 414
+UnsupportedMediaType = 415
+RangeNotSatisfiable = 416
+ExpectationFailed = 417
+ImATeapot = 418
+MisdirectedRequest = 421
+UnprocessableEntity = 422
+Locked = 423
+FailedDependency = 424
+UpgradeRequired = 426
+PreconditionRequired = 428
+TooManyRequests = 429
+RequestHeaderFieldsTooLarge = 431
+UnavailableForLegalReasons = 451
+InternalServerError = 500
+NotImplemented = 501
+BadGateway = 502
+ServiceUnavailable = 503
+GatewayTimeout = 504
+HttpVersionNotSupported = 505
+VariantAlsoNegotiates = 506
+InsufficientStorage = 507
+LoopDetected = 508
+NotExtended = 510
+NetworkAuthenticationRequired = 511
+```
+
 
 ## Details
 
@@ -52,6 +97,12 @@ pub enum DataStoreError {
 
 - Errors may be enums, structs with named fields, tuple structs, or unit
   structs.
+
+ - An `http::StatusCode` replaces your error source if you provide a canonical
+   http status reason as first argument as in the example above.
+
+   Note: This works only for enums and providing one will break downcasting to the
+   underlying `#[from]` / `#[source]` error.
 
 - A `Display` impl is generated for your error if you provide `#[error("...")]`
   messages on the struct or each variant of your enum, as shown above in the

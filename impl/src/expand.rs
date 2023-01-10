@@ -1,6 +1,7 @@
 use crate::ast::{Enum, Field, Input, Struct};
 use crate::attr::Trait;
 use crate::generics::InferredBounds;
+use heck::ToShoutySnakeCase;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, quote_spanned, ToTokens};
 use std::collections::BTreeSet as Set;
@@ -197,10 +198,18 @@ fn impl_enum(input: Enum) -> TokenStream {
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let mut error_inferred_bounds = InferredBounds::new();
 
-    let source_method = if input.has_source() {
+    let source_method = if input.has_source() || input.has_status() {
         let arms = input.variants.iter().map(|variant| {
             let ident = &variant.ident;
-            if variant.attrs.transparent.is_some() {
+            if let Some(ref status_name) = variant.attrs.status_name {
+                let error_code = ident.to_string().to_shouty_snake_case();
+                quote! {
+                    #ty::#ident {..} => Some(&thiserror::StaticErrorWithStatus {
+                        status_code: http::StatusCode::#status_name,
+                        error_code: #error_code,
+                    }),
+                }
+            } else if variant.attrs.transparent.is_some() {
                 let only_field = &variant.fields[0];
                 if only_field.contains_generic {
                     error_inferred_bounds.insert(only_field.ty, quote!(std::error::Error));

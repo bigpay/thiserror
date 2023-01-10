@@ -8,10 +8,11 @@ documentation = "https://docs.rs/thiserror"
 edition = "2018"
 keywords = ["error", "error-handling", "derive"]
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/dtolnay/thiserror"
+repository = "https://github.com/bigpay/thiserror"
 rust-version = "1.31"
 
 [dependencies]
+http = "0.2.8"
 thiserror-impl = { version = "=1.0.38", path = "impl" }
 
 [dev-dependencies]

@@ -1,4 +1,4 @@
-//! [![github]](https://github.com/dtolnay/thiserror)&ensp;[![crates-io]](https://crates.io/crates/thiserror)&ensp;[![docs-rs]](https://docs.rs/thiserror)
+//! [![github]](https://github.com/bigpay/thiserror)&ensp;[![crates-io]](https://crates.io/crates/thiserror)&ensp;[![docs-rs]](https://docs.rs/thiserror)
 //!
 //! [github]: https://img.shields.io/badge/github-8da0cb?style=for-the-badge&labelColor=555555&logo=github
 //! [crates-io]: https://img.shields.io/badge/crates.io-fc8d62?style=for-the-badge&labelColor=555555&logo=rust
@@ -21,16 +21,16 @@
 //!
 //! #[derive(Error, Debug)]
 //! pub enum DataStoreError {
-//!     #[error("data store disconnected")]
+//!     #[error(InternalServerError, "data store disconnected")]
 //!     Disconnect(#[from] io::Error),
-//!     #[error("the data for key `{0}` is not available")]
+//!     #[error(NotFound, "the data for key `{0}` is not available")]
 //!     Redaction(String),
-//!     #[error("invalid header (expected {expected:?}, found {found:?})")]
+//!     #[error(BadRequest, "invalid header (expected {expected:?}, found {found:?})")]
 //!     InvalidHeader {
 //!         expected: String,
 //!         found: String,
 //!     },
-//!     #[error("unknown data store error")]
+//!     #[error(InternalServerError, "unknown data store error")]
 //!     Unknown,
 //! }
 //! ```
@@ -46,6 +46,12 @@
 //!
 //! - Errors may be enums, structs with named fields, tuple structs, or unit
 //!   structs.
+//!
+//! - An `http::StatusCode` replaces your error source if you provide a canonical
+//!   http status reason as first argument as in the example above.
+//!
+//!   Note: This works only for enums and providing one will break downcasting to the
+//!   underlying `#[from]` / `#[source]` error.
 //!
 //! - A `Display` impl is generated for your error if you provide
 //!   `#[error("...")]` messages on the struct or each variant of your enum, as
@@ -243,6 +249,20 @@ mod display;
 mod provide;
 
 pub use thiserror_impl::*;
+
+#[derive(Debug)]
+pub struct StaticErrorWithStatus {
+    pub status_code: http::StatusCode,
+    pub error_code: &'static str,
+}
+
+impl std::error::Error for StaticErrorWithStatus {}
+
+impl std::fmt::Display for StaticErrorWithStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.error_code)
+    }
+}
 
 // Not public API.
 #[doc(hidden)]

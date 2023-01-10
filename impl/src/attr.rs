@@ -1,3 +1,4 @@
+use heck::ToShoutySnakeCase;
 use proc_macro2::{Delimiter, Group, Span, TokenStream, TokenTree};
 use quote::{format_ident, quote, ToTokens};
 use std::collections::BTreeSet as Set;
@@ -8,7 +9,50 @@ use syn::{
     Result, Token,
 };
 
+const ALLOWED_STATUS_NAMES: [&str; 39] = [
+    "BadRequest",
+    "Unauthorized",
+    "PaymentRequired",
+    "Forbidden",
+    "NotFound",
+    "MethodNotAllowed",
+    "NotAcceptable",
+    "ProxyAuthenticationRequired",
+    "RequestTimeout",
+    "Conflict",
+    "Gone",
+    "LengthRequired",
+    "PreconditionFailed",
+    "PayloadTooLarge",
+    "UriTooLong",
+    "UnsupportedMediaType",
+    "RangeNotSatisfiable",
+    "ExpectationFailed",
+    "ImATeapot",
+    "MisdirectedRequest",
+    "UnprocessableEntity",
+    "Locked",
+    "FailedDependency",
+    "UpgradeRequired",
+    "PreconditionRequired",
+    "TooManyRequests",
+    "RequestHeaderFieldsTooLarge",
+    "UnavailableForLegalReasons",
+    "InternalServerError",
+    "NotImplemented",
+    "BadGateway",
+    "ServiceUnavailable",
+    "GatewayTimeout",
+    "HttpVersionNotSupported",
+    "VariantAlsoNegotiates",
+    "InsufficientStorage",
+    "LoopDetected",
+    "NotExtended",
+    "NetworkAuthenticationRequired",
+];
+
 pub struct Attrs<'a> {
+    pub status_name: Option<Ident>,
     pub display: Option<Display<'a>>,
     pub source: Option<&'a Attribute>,
     pub backtrace: Option<&'a Attribute>,
@@ -46,6 +90,7 @@ pub enum Trait {
 
 pub fn get(input: &[Attribute]) -> Result<Attrs> {
     let mut attrs = Attrs {
+        status_name: None,
         display: None,
         source: None,
         backtrace: None,
@@ -100,10 +145,24 @@ fn parse_error_attribute<'a>(attrs: &mut Attrs<'a>, attr: &'a Attribute) -> Resu
             });
             return Ok(());
         }
-
+        if let Some(ident) = input.parse::<Option<Ident>>()? {
+            let status_name = ident.to_string();
+            if ALLOWED_STATUS_NAMES.contains(&status_name.as_str()) {
+                attrs.status_name = Some(Ident::new(
+                    &status_name.to_shouty_snake_case(),
+                    Span::call_site(),
+                ));
+            } else {
+                return Err(Error::new_spanned(
+                    attr,
+                    "invalid #[error(...)] status name",
+                ));
+            }
+            input.parse::<Token![,]>()?;
+        }
         let display = Display {
             original: attr,
-            fmt: input.parse()?,
+            fmt: input.parse::<LitStr>()?,
             args: parse_token_expr(input, false)?,
             has_bonus_display: false,
             implied_bounds: Set::new(),

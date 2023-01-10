@@ -21,6 +21,12 @@ impl Struct<'_> {
 }
 
 impl Enum<'_> {
+    pub(crate) fn has_status(&self) -> bool {
+        self.variants
+            .iter()
+            .any(|variant| variant.attrs.status_name.is_some())
+    }
+
     pub(crate) fn has_source(&self) -> bool {
         self.variants
             .iter()
